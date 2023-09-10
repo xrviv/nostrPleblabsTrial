@@ -1,96 +1,165 @@
 <!DOCTYPE html>
 <html>
-<head>
-	<title>Hello World!</title>
-	<style>
-		body {
-			background: linear-gradient(to right, #9d0dd1, #490661);
-		}
-		h1 {
-			text-align: center;
-			color: white;
-			margin-top: 20vh;
-			font-size: 5em;
-			font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif, sans-serif;
-		}
-		h2 {
-		    text-align: center;
-		    color: white;
-		    margin-top 15vh;
-		    font-size: 1em;
-		    font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif, sans-serif;
-		}
-	</style>
-	<script src="https://bitcoincore.tech/apps/bitcoinjs-ui/lib/bitcoinjs-lib.js"></script>
-	<script src="https://bundle.run/noble-secp256k1@1.2.14"></script>
-	<script src="https://bundle.run/browserify-cipher@1.0.1"></script>
-	<link rel="icon" href="/favicon.ico" type="image/x-icon">
-</head>
-<body>
-	<script>
-		var { getSharedSecret, schnorr, utils } = nobleSecp256k1
-		var crypto 	= window.crypto
-		var getRand = size => crypto.getRandomValues(newUint8Array(size))
-		var sha256 	= bitcoinjs.crypto.sha256
-		var keypair = bitcoinjs.ECPair.makeRandom()
-		var privKey = keypair.privateKey.toString( "hex" )
-		var pubKey 	= keypair.publicKey.toString( "hex" )
-		pubKey		= pubKey.substring( 2 )
-		console.log( pubKey );
-		// Below, connects to a relay
-		var relay = "wss://relayable.org";
-		var socket = new WebSocket( relay );
-		// Below, log any messages the relay sends us
-		socket.addEventListener('message', async function( message ) {
-			var [ type, subId, event ] = JSON.parse( message.data );
-			var { kind, content } = event || {}
-			if (!event) return
-			console.log('message', event)
-			if (kind === 4) {
-				content = await decrypt(privKey, pubKey, content)
-			}
-			console.log('content', content)
-		}) // Below, Subscribe to yourself
-		var subId = bitcoinjs.ECPair.makeRandom().privateKey.toString( "hex" )
-		var filter = { "authors": [ pubKey ] }
-		
-		socket.addEventListener('open', async function( e ) {
-			console.log( "connected to " + relay )
-		
-			var subscription = [ "REQ", subId, filter ]
-			console.log('Subscription:', subscription)
-			
-			socket.send(JSON.stringify( subscription ));
-		// ## Sign and send a public note
-		// put this stuff inside the "open" event listener from earlier
-        		var event = {
-        		    "content"	    : "this workshop is awesome!",
-        		    "created_at"	: Math.floor( Date.now() / 1000 ),
-        		    "kind"		    : 1,
-        		    "tags"	    	: [],
-        		    "pubkey"    	: pubKey,
-        	}
-        	var signedEvent = await getSignedEvent(event, privKey)
-        	console.log('signedEvent:', signedEvent)
-        	socket.send(JSON.stringify([ "EVENT", signedEvent ]))
-        }) //close this bracket, but we'll put more stuff in here later
-		// ## Prepare a public note for signing
-		// Referenced here: https://github.com/nostr-protocol/nips/blob/master/01.md
-			async function getSignedEvent(event, privateKey) {
-				var eventData = JSON.stringify([
-					0,						// Reserved for future use
-					event['pubkey'],		// The sender's public key
-					event['created at'],	// Unix timestamp
-					event['kind'],			// Message "kind" or type
-					event['tags'],			// tags identify replies/recipients
-					event['content']		// Your note contents
-				])
-	        event.id = sha256( eventData ).toString( 'hex' )
-	        event.sig = await schnorr.sign( event.id, privateKey )
-	        return event
-		}
-	</script>
-	<h1>Hello World ;)</h1>
-	<h2>This is Danny's Test Implementation of the Nostr Workshop with Super Testnet conducted by <a href="https://www.youtube.com/watch?v=HbicnlCXg_Y">PlebLabs</a></h2>
-</body>
+  <head>
+    <title>Hello World!</title>
+    <style>
+      body {
+      	background: linear-gradient(to right, #9d0dd1, #490661);
+      }
+      h1 {
+      	text-align: center;
+      	color: white;
+      	margin-top: 20vh;
+      	font-size: 5em;
+      	font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif, sans-serif;
+      }
+      h2 {
+          text-align: center;
+          color: white;
+          margin-top 15vh;
+          font-size: 1em;
+          font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif, sans-serif;
+      }
+    </style>
+    <script src="https://bitcoincore.tech/apps/bitcoinjs-ui/lib/bitcoinjs-lib.js"></script>
+    <script src="https://bundle.run/noble-secp256k1@1.2.14"></script>
+    <script src="https://bundle.run/browserify-cipher@1.0.1"></script>
+    <link rel="icon" href="/favicon.ico" type="image/x-icon" />
+  </head>
+  <body>
+    <script>
+      var { getSharedSecret, schnorr, utils } = nobleSecp256k1;
+      var crypto = window.crypto;
+      var getRand = (size) => crypto.getRandomValues(newUint8Array(size));
+      var sha256 = bitcoinjs.crypto.sha256;
+      var keypair = bitcoinjs.ECPair.makeRandom();
+      var privKey = keypair.privateKey.toString("hex");
+      var pubKey = keypair.publicKey.toString("hex");
+      pubKey = pubKey.substring(2);
+      console.log(pubKey);
+      // Below, connects to a relay
+      var relay = "wss://relayable.org";
+      var socket = new WebSocket(relay);
+      // Below, log any messages the relay sends us
+      socket.addEventListener("message", async function (message) {
+        var [type, subId, event] = JSON.parse(message.data);
+        var { kind, content } = event || {};
+        if (!event) return;
+        console.log("message", event);
+        if (kind === 4) {
+          content = await decrypt(privKey, pubKey, content);
+        }
+        console.log("content", content);
+      }); // Below, Subscribe to yourself
+      var subId = bitcoinjs.ECPair.makeRandom().privateKey.toString("hex");
+      var filter = { authors: [pubKey] };
+
+      socket.addEventListener("open", async function (e) {
+        console.log("connected to " + relay);
+
+        var subscription = ["REQ", subId, filter];
+        console.log("Subscription:", subscription);
+
+        socket.send(JSON.stringify(subscription));
+        // ## Sign and send a public note
+        // put this stuff inside the "open" event listener from earlier
+        var event = {
+          content: "this workshop is awesome!",
+          created_at: Math.floor(Date.now() / 1000),
+          kind: 1,
+          tags: [],
+          pubkey: pubKey,
+        };
+        var signedEvent = await getSignedEvent(event, privKey);
+        console.log("signedEvent:", signedEvent);
+        socket.send(JSON.stringify(["EVENT", signedEvent]));
+        // ## Sign and send an encrypted note
+        var message = "this message is super secret!";
+        var encrypted = encrypt(privKey, pubKey, message);
+        var event2 = {
+          content: encrypted,
+          created_at: Math.floor(Date.now() / 1000),
+          kind: 4,
+          tags: [["p", pubKey]],
+          pubkey: pubKey,
+        };
+        var signedEvent2 = await getSignedEvent(event2, privKey);
+        socket.send(JSON.stringify(["EVENT", signedEvent2]));
+      });
+      // ## Prepare a public note for signing
+      // Referenced here: https://github.com/nostr-protocol/nips/blob/master/01.md
+      async function getSignedEvent(event, privateKey) {
+        var eventData = JSON.stringify([
+          0, // Reserved for future use
+          event["pubkey"], // The sender's public key
+          event["created at"], // Unix timestamp
+          event["kind"], // Message "kind" or type
+          event["tags"], // tags identify replies/recipients
+          event["content"], // Your note contents
+        ]);
+        event.id = sha256(eventData).toString("hex");
+        event.sig = await schnorr.sign(event.id, privateKey);
+        return event;
+      }
+      // ## For hex encryption function (Private Messages)
+      function heyToBytes(hex) {
+        return Uint8Array.from(
+          hex.match(/.{1,2}/g).map((byte) => parseInt(byte, 16))
+        );
+      }
+
+      function bytesToHex(bytes) {
+        return bytes.reduce(
+          (str, byte) => str + byte.toString(16).padStart(2, "0"),
+          ""
+        );
+      }
+      // ## function for decoding Base 64
+      function base64ToHex(str) {
+        var raw = atob(str);
+        var result = "";
+        var i;
+        for (i = 0; i < raw.length; i++) {
+          var hex = raw.charCodeAt(i).toString(16);
+          result += hex.length === 2 ? hex : "0" + hex;
+        }
+        return result;
+      } // Encrypt function
+      function encrypt(privkey, pubkey, text) {
+        var key = nobleSecp256k1
+          .getSharedSecret(privkey, "02" + pubkey, true)
+          .substring(2);
+        var iv = window.crypto.getRandomValues(new Uint8Array(16));
+        var cipher = browserifyCipher.createCipheriv(
+          "aes-256-cbc",
+          hextoBytes(key),
+          iv
+        );
+        var encryptedMessage = cipher.update(text, "utf8", "base64");
+        var uint8view = new Uint8Array(iv.buffer);
+        var decoder = new TextDecoder();
+        return emsg + "?iv=" + btoa(String.fromCharCode.apply(null, uint8View));
+      } // Decrypt function
+      function decrypt(privkey, pubkey, ciphertext) {
+        var [emsg, iv] = ciphertext.split("?iv=");
+        var key = nobleSecp256k1
+          .getSharedSecret(privkey, "02" + pubkey, true)
+          .substring(2);
+        var decipher = browserifyCipher.createDecipheriv(
+          "aes-256-cbc",
+          hexToBytes(key),
+          hexToBytes(base64ToHex(iv))
+        );
+        var decryptedMessage = decipher.update(emsg, "base64");
+        dmsg = decryptedMessage + decipher.final("utf8");
+        return dmsg;
+      }
+    </script>
+    <h1>Hello World ;)</h1>
+    <h2>
+      This is Danny's Test Implementation of the Nostr Workshop with Super
+      Testnet conducted by
+      <a href="https://www.youtube.com/watch?v=HbicnlCXg_Y">PlebLabs</a>
+    </h2>
+  </body>
 </html>
